@@ -289,14 +289,22 @@ match_indent = true
 target = "game.lua"
 pattern = "modulate_sound(dt)"
 position = "after"
-payload = "G.enh_cache = {extra = {}, enh = {}}"
+payload = "SMODS.enh_cache:clear()"
 match_indent = true
 
-# Reset extra_enhancements on set_ability
+# Reset enhancement cache on set_ability and set_base
 [[patches]]
 [patches.pattern]
 target = "card.lua"
 pattern = "function Card:set_ability(center, initial, delay_sprites)"
 position = "after"
-payload = "self.extra_enhancements = nil"
+payload = "SMODS.enh_cache:write(self, nil)"
+match_indent = true
+
+[[patches]]
+[patches.pattern]
+target = "card.lua"
+pattern = "function Card:set_base(card, initial)"
+position = "after"
+payload = "SMODS.enh_cache:write(self, nil)"
 match_indent = true
