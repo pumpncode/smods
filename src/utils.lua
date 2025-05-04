@@ -1170,6 +1170,13 @@ G.FUNCS.update_suit_colours = function(suit, skin, palette_num)
     G.C.SUITS[suit] = new_colour_proto
 end
 
+SMODS.smart_level_up_hand = function(card, hand, instant, amount)
+    local old_text = copy_table(G.GAME.current_round.current_hand)
+    update_hand_text({sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3}, {handname=localize(hand, 'poker_hands'),chips = G.GAME.hands[hand].chips, mult = G.GAME.hands[hand].mult, level=G.GAME.hands[hand].level})
+    level_up_hand(card, hand, instant, type(amount) == 'number' and amount or 1)
+    update_hand_text({sound = 'button', volume = 0.7, pitch = 1.1, delay = 0}, {mult = old_text.mult, chips = old_text.chips, handname = old_text.handname, level = old_text.handname ~= "" and G.GAME.hands[G.GAME.last_hand_played].level or ''})
+end
+
 -- This function handles the calculation of each effect returned to evaluate play.
 -- Can easily be hooked to add more calculation effects ala Talisman
 SMODS.calculate_individual_effect = function(effect, scored_card, key, amount, from_edition)
@@ -1343,10 +1350,7 @@ SMODS.calculate_individual_effect = function(effect, scored_card, key, amount, f
     if key == 'level_up' then
         if effect.card and effect.card ~= scored_card then juice_card(effect.card) end
         local hand_type = effect.level_up_hand or G.GAME.last_hand_played
-        old_text = copy_table(G.GAME.current_round.current_hand)
-        update_hand_text({sound = 'button', volume = 0.7, pitch = 0.8, delay = 0.3}, {handname=localize(hand_type, 'poker_hands'),chips = G.GAME.hands[hand_type].chips, mult = G.GAME.hands[hand_type].mult, level=G.GAME.hands[hand_type].level})
-        level_up_hand(scored_card, hand_type, effect.instant, type(amount) == 'number' and amount or 1)
-        update_hand_text({sound = 'button', volume = 0.7, pitch = 1.1, delay = 0}, {mult = old_text.mult, chips = old_text.chips, handname = old_text.handname, level = old_text.handname ~= "" and G.GAME.hands[G.GAME.last_hand_played].level or ''})
+        SMODS.smart_level_up_hand(scored_card, hand_type, effect.instant, amount)
         return true
     end
 
@@ -1389,8 +1393,9 @@ SMODS.trigger_effects = function(effects, card)
         for _, key in ipairs({'playing_card', 'enhancement', 'edition', 'seals'}) do
             SMODS.calculate_effect_table_key(effect_table, key, card, ret)
         end
-        for _, key in ipairs(SMODS.Sticker.obj_buffer) do
-            SMODS.calculate_effect_table_key(effect_table, key, card, ret)
+        for _, k in ipairs(SMODS.Sticker.obj_buffer) do
+            local v = SMODS.Stickers[k]
+            SMODS.calculate_effect_table_key(effect_table, v, card, ret)
         end
         -- Playing cards at end of round
         SMODS.calculate_effect_table_key(effect_table, 'end_of_round', card, ret)
@@ -1879,12 +1884,13 @@ end
 function SMODS.blueprint_effect(copier, copied_card, context)
     if not copied_card or copied_card == copier or context.no_blueprint then return end
     if (context.blueprint or 0) > #G.jokers.cards then return end
+    local old_context_blueprint = context.blueprint
     context.blueprint = (context.blueprint and (context.blueprint + 1)) or 1
     local old_context_blueprint_card = context.blueprint_card
     context.blueprint_card = context.blueprint_card or copier
     local eff_card = context.blueprint_card
     local other_joker_ret = copied_card:calculate_joker(context)
-    context.blueprint = nil
+    context.blueprint = old_context_blueprint
     context.blueprint_card = old_context_blueprint_card
     if other_joker_ret then
         other_joker_ret.card = eff_card
@@ -2174,8 +2180,7 @@ end
 
 function SMODS.multiplicative_stacking(base, perma)
     base = (base ~= 0 and base or 1)
-    perma = (perma ~= 0 and perma + 1 or 1)
-    local ret = base * perma
+    local ret = base * (perma + 1)
     return (ret == 1 and 0) or (ret > 0 and ret) or 0
 end
 

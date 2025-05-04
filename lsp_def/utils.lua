@@ -171,6 +171,14 @@ function SMODS.calculate_repetitions(card, context, reps) end
 --- Helper function to copy the ability of another joker. Useful for implementing Blueprint-like jokers.
 function SMODS.blueprint_effect(copier, copied_card, context) end
 
+---@param card Card?
+---@param hand string
+---@param instant boolean
+---@param amount number?
+-- Like level_up_hand(), but takes care of calling update_hand_text().
+-- TODO Tries to avoid calling update_hand_text() if unnecessary.
+function SMODS.smart_level_up_hand(card, hand, instant, amount) end
+
 ---@param _type string
 ---@param _context string
 ---@return CardArea[]|table[]
@@ -508,5 +516,6 @@ function SMODS.signed_dollars(val) end
 ---@param base number
 ---@param perma number
 ---@return number
---- Returns result of multiplying `base` and `perma + 1`. 
+--- Returns result of multiplying `base` and `perma + 1`.
+--- Reproduces weird vanilla behavior of using 0 for no/negative x_mult.
 function SMODS.multiplicative_stacking(base, perma) end
