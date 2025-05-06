@@ -132,7 +132,7 @@ pattern = '''
 payload = '''
 if multi_boxes[1] then
     for i=#multi_boxes, 1, -1 do
-        table.insert(ret_val.nodes[1].nodes[1].nodes[1].nodes, 3, multi_boxes[i])
+        table.insert(ret_val.nodes[1].nodes[1].nodes[1].nodes, #ret_val.nodes[1].nodes[1].nodes[1].nodes, multi_boxes[i])
     end
 end
 return ret_val
