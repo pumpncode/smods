@@ -219,13 +219,24 @@ local function handle_loc_file(dir, language, force, mod_id)
     end
 end
 
-function SMODS.handle_loc_file(path, mod_id)
-    local dir = path .. 'localization/'
+function SMODS.load_mod_localization(path, mod_id, depth)
+    local dir = path .. (depth and '' or 'localization/')
+    depth = (depth or 0) + 1
     handle_loc_file(dir, 'en-us', true, mod_id)
     handle_loc_file(dir, 'default', true, mod_id)
     handle_loc_file(dir, G.SETTINGS.language, true, mod_id)
     if G.SETTINGS.real_language then handle_loc_file(dir, G.SETTINGS.real_language, true, mod_id) end
+    if depth >= 4 then return end
+    for _,v in ipairs(SMODS.NFS.getDirectoryItems(dir)) do
+        local new_path = dir .. v
+        local file_type = SMODS.NFS.getInfo(new_path).type
+        if file_type == 'directory' or file_type == 'symlink' then
+            SMODS.load_mod_localization(new_path..'/', mod_id, depth)
+        end
+    end
 end
+-- deprecated, old identifier kept for compatibility
+SMODS.handle_loc_file = SMODS.load_mod_localization
 
 function SMODS.insert_pool(pool, center, replace)
     assert(pool, ("Attempted to insert object \"%s\" into an empty pool."):format(center.key or "UNKNOWN"))
@@ -364,7 +375,7 @@ function SMODS.create_card(t)
     if not t.area and t.key and G.P_CENTERS[t.key] then
         t.area = G.P_CENTERS[t.key].consumeable and G.consumeables or G.P_CENTERS[t.key].set == 'Joker' and G.jokers
     end
-    if not t.area and not t.key and t.set and SMODS.ConsumableTypes[t.set] or t.set == 'Consumeables' then
+    if not t.area and not t.key and t.set and (SMODS.ConsumableTypes[t.set] or t.set == 'Consumeables') then
         t.area = G.consumeables
     end
     if not t.key and t.set == 'Playing Card' or t.set == 'Base' or t.set == 'Enhanced' or (not t.set and (t.front or t.rank or t.suit)) then
@@ -881,7 +892,7 @@ function Card:add_sticker(sticker, bypass_check)
 end
 
 function Card:remove_sticker(sticker)
-    if self.ability[sticker] then
+    if (sticker == 'pinned' and self.pinned) or self.ability[sticker] then
         SMODS.Stickers[sticker]:apply(self, false)
         SMODS.enh_cache:write(self, nil)
     end
@@ -1179,6 +1190,11 @@ end
 -- This function handles the calculation of each effect returned to evaluate play.
 -- Can easily be hooked to add more calculation effects ala Talisman
 SMODS.calculate_individual_effect = function(effect, scored_card, key, amount, from_edition)
+    if key == 'pre_func' then
+        effect.pre_func()
+        return true
+    end
+
     if SMODS.Scoring_Parameter_Calculation[key] then
         return SMODS.Scoring_Parameters[SMODS.Scoring_Parameter_Calculation[key]]:calc_effect(effect, scored_card, key, amount, from_edition)
     end
@@ -1387,6 +1403,9 @@ SMODS.calculate_effect = function(effect, scored_card, from_edition, pre_jokers)
 end
 
 SMODS.calculation_keys = {}
+SMODS.pre_scoring_calculation_keys = {
+    'pre_func'
+}
 SMODS.scoring_parameter_keys = {
     'chips', 'h_chips', 'chip_mod',
     'mult', 'h_mult', 'mult_mod',
@@ -3420,3 +3439,27 @@ end
 SMODS.custom_debuff_handling = {
     'j_shoot_the_moon', 'j_baron', 'j_reserved_parking', 'j_raised_fist'
 }
+
+function SMODS.get_card_type_text_colour(type, center, card)
+    if (card or {}).debuff then return end
+    if (center or {}).badge_text_colour then return center.badge_text_colour end
+    if type == 'Joker' and center then
+        local rarity = ({"Common", "Uncommon", "Rare", "Legendary"})[center.rarity] or center.rarity
+        return SMODS.Rarities[rarity] and SMODS.Rarities[rarity].text_colour
+    end
+    if type and SMODS.ConsumableTypes[type] then
+        return SMODS.ConsumableTypes[type].text_colour
+    end
+end
+
+function SMODS.get_badge_text_colour(key)
+    if not key then return end
+    if (SMODS.Rarities[key] or {}).text_colour then return SMODS.Rarities[key].text_colour end
+    if (SMODS.Stickers[key] or {}).text_colour then return SMODS.Stickers[key].text_colour end
+    for _, v in ipairs(G.P_CENTER_POOLS.Edition) do
+        if v.key:sub(3) == key and v.text_colour then return v.text_colour end
+    end
+    for k, v in pairs(SMODS.Seals) do
+        if k:lower()..'_seal' == key and v.text_colour then return v.text_colour end
+    end
+end

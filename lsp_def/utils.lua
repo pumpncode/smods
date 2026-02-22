@@ -340,8 +340,15 @@ function SMODS.SAVE_UNLOCKS() end
 function SMODS.process_loc_text(ref_table, ref_value, loc_txt, key) end
 
 ---@param path string
+--- This method is deprecated. Use SMODS.load_mod_localization instead.
 --- Handles injecting localization files.
-function SMODS.handle_loc_file(path) end
+function SMODS.handle_loc_file(path, mod_id) end
+
+---@param path string The top level path of the mod that localization should be loaded from.
+---@param mod_id string The ID of the mod localization strings are being loaded for.
+---@param depth number Recursive calling depth. This function is called recursively to load localization files located in subfolders of a mod's localization folder up to four folders deep.
+--- Handles injecting a mod's localization files.
+function SMODS.load_mod_localization(path, mod_id, depth) end
 
 ---@param pool table[]
 ---@param center metatable
@@ -773,4 +780,16 @@ function SMODS.challenge_is_unlocked(challenge, k) end
 --- a string, which changes the displayed text, a boolean, which disables StatusText when set to `false`,
 --- a table, which defines the `attention_text` function settings, or a function that takes the key of
 --- the hand and scoring parameter being upgraded as arguments and returns a boolean, string or table
-    function SMODS.upgrade_poker_hands(args) end
+function SMODS.upgrade_poker_hands(args) end
+
+---Returns the text colour for the card type's badge or nil if none
+---@param type string?
+---@param center SMODS.Center|table?
+---@param card Card|table?
+---@return table?
+function SMODS.get_card_type_text_colour(type, center, card) end
+
+---Returns the text colour for the badge of an object with this key or nil if none
+---@param key string
+---@return table?
+function SMODS.get_badge_text_colour(key) end
